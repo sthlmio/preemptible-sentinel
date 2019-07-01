@@ -13,4 +13,4 @@
 
 .idea
 .DS_Store
-controller
+/controller
