@@ -83,17 +83,21 @@ func (pc *PreemptibleController) Run(stopCh <-chan struct{}) {
 }
 
 func (pc *PreemptibleController) ListNodes() {
-	nodes, err := pc.client.CoreV1().Nodes().List(metav1.ListOptions{})
+	options := metav1.ListOptions{
+		LabelSelector: "cloud.google.com/gke-preemptible=true",
+	}
+
+	nodes, err := pc.client.CoreV1().Nodes().List(options)
+
 	if err != nil {
 		logrus.Fatalf("Error listing nodes (skipping rearrange): %v", err)
-	} else {
-		for _, n := range nodes.Items {
-			if n.Labels["cloud.google.com/gke-preemptible"] == "true" {
-				logrus.WithFields(logrus.Fields{
-					"node":              n.Name,
-					"creationTimestamp": n.CreationTimestamp,
-				}).Infof("listed")
-			}
-		}
+		return
+	}
+
+	for _, n := range nodes.Items {
+		logrus.WithFields(logrus.Fields{
+			"node":              n.Name,
+			"creationTimestamp": n.CreationTimestamp,
+		}).Infof("listed")
 	}
 }

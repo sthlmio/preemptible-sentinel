@@ -47,7 +47,7 @@ spec:
       serviceAccountName: pvm-controller
       containers:
         - name: pvm-controller
-          image: eu.gcr.io/sthlmio/pvm-controller:0.0.7-fc9307c
+          image: eu.gcr.io/sthlmio/pvm-controller:0.0.9-abc2009
           resources:
             requests:
               cpu: 100m
