@@ -5,7 +5,7 @@ metadata:
   name: pvm-controller
 rules:
   - apiGroups: [""]
-    resources: ["nodes"]
+    resources: ["nodes", "pods"]
     verbs: ["get", "watch", "list"]
 ---
 apiVersion: v1
@@ -47,7 +47,7 @@ spec:
       serviceAccountName: pvm-controller
       containers:
         - name: pvm-controller
-          image: eu.gcr.io/sthlmio/pvm-controller:0.0.9-abc2009
+          image: eu.gcr.io/sthlmio/pvm-controller:0.2.6-4fb5eda
           resources:
             requests:
               cpu: 100m

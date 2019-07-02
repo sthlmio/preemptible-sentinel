@@ -27,13 +27,16 @@ package controller
 import (
 	"github.com/sirupsen/logrus"
 	"github.com/sthlmio/pvm-controller/pkg/utils"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"os"
 	"os/signal"
+	"sort"
 	"syscall"
 	"time"
 )
@@ -76,8 +79,8 @@ func (pc *PreemptibleController) Run(stopCh <-chan struct{}) {
 
 	logrus.Info("Starting Preemptible Controller")
 
-	// Check things every 10 second.
-	go wait.Until(pc.ListNodes, 10*time.Second, stopCh)
+	// Check things every 10 minute
+	go wait.Until(pc.ListNodes, 10*time.Minute, stopCh)
 	<-stopCh
 	logrus.Info("Shutting down Preemptible Controller")
 }
@@ -94,10 +97,50 @@ func (pc *PreemptibleController) ListNodes() {
 		return
 	}
 
-	for _, n := range nodes.Items {
-		logrus.WithFields(logrus.Fields{
-			"node":              n.Name,
-			"creationTimestamp": n.CreationTimestamp,
-		}).Infof("listed")
+	// Sort nodes by creation timestamp
+	sort.SliceStable(nodes.Items, func(i, j int) bool { return nodes.Items[i].CreationTimestamp.Before(&nodes.Items[j].CreationTimestamp) })
+
+	lengthOfNodeSlice := len(nodes.Items)
+	for i, node := range nodes.Items {
+		if !utils.IsNodeReady(node.Status) {
+			continue
+		}
+
+		nextIndex := 1 + i
+		if nextIndex < lengthOfNodeSlice {
+			nextNode := nodes.Items[nextIndex]
+
+			if !utils.IsNodeReady(nextNode.Status) {
+				continue
+			}
+
+			if node.CreationTimestamp.Hour() == nextNode.CreationTimestamp.Hour() {
+				logrus.WithFields(logrus.Fields{
+					"node": node.Name,
+				}).Infof("processing")
+
+				pods, err := pc.ListPods(node.Name)
+
+				if err != nil {
+					logrus.Fatalf("Error listing pods (skipping rearrange): %v", err)
+					break
+				}
+
+				for _, p := range pods.Items {
+					logrus.WithFields(logrus.Fields{
+						"pod": p.Name,
+						"namespace": p.Namespace,
+					}).Infof("processing")
+				}
+			}
+		}
 	}
+}
+
+func (pc *PreemptibleController) ListPods(nodeName string) (*v1.PodList, error) {
+	options := metav1.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector("spec.nodeName", nodeName).String(),
+	}
+
+	return pc.client.CoreV1().Pods(metav1.NamespaceAll).List(options)
 }

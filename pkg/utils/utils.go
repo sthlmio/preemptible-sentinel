@@ -28,10 +28,21 @@ import (
 	"os"
 
 	"github.com/sirupsen/logrus"
+	types "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
+
+func IsNodeReady(nodeStatus types.NodeStatus) bool {
+	for _, condition := range nodeStatus.Conditions {
+		if condition.Type == types.NodeReady {
+			return true
+		}
+	}
+
+	return false
+}
 
 // GetClient returns a k8s clientset to the request from inside of cluster
 func GetClient() kubernetes.Interface {
