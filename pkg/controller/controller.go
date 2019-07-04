@@ -28,6 +28,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/sthlmio/pvm-controller/pkg/utils"
 	v1 "k8s.io/api/core/v1"
+	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -80,20 +81,47 @@ func (pc *PreemptibleController) Run(stopCh <-chan struct{}) {
 	logrus.Info("Starting Preemptible Controller")
 
 	// Check things every 10 minute
-	go wait.Until(pc.ListNodes, 10*time.Minute, stopCh)
+	go wait.Until(pc.Process, 10*time.Minute, stopCh)
 	<-stopCh
 	logrus.Info("Shutting down Preemptible Controller")
 }
 
-func (pc *PreemptibleController) ListNodes() {
+func (pc *PreemptibleController) ListNodes() (*v1.NodeList, error) {
 	options := metav1.ListOptions{
 		LabelSelector: "cloud.google.com/gke-preemptible=true",
 	}
 
-	nodes, err := pc.client.CoreV1().Nodes().List(options)
+	return pc.client.CoreV1().Nodes().List(options)
+}
+
+func (pc *PreemptibleController) ListPods(nodeName string) (*v1.PodList, error) {
+	options := metav1.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector("spec.nodeName", nodeName).String(),
+	}
+
+	return pc.client.CoreV1().Pods(metav1.NamespaceAll).List(options)
+}
+
+func (pc *PreemptibleController) CheckIfPodIsDeleted(p v1.Pod) error {
+	return wait.PollImmediate(time.Second, 30*time.Second, func() (bool, error) {
+		_, err := pc.client.CoreV1().Pods(p.Namespace).Get(p.Name, metav1.GetOptions{})
+		if apierrs.IsNotFound(err) {
+			return true, nil // done
+		}
+
+		if err != nil {
+			return true, err // stop wait with error
+		}
+
+		return false, nil
+	})
+}
+
+func (pc *PreemptibleController) Process() {
+	nodes, err := pc.ListNodes()
 
 	if err != nil {
-		logrus.Fatalf("Error listing nodes (skipping rearrange): %v", err)
+		logrus.Errorf("Error listing nodes (skipping rearrange): %v", err)
 		return
 	}
 
@@ -114,33 +142,60 @@ func (pc *PreemptibleController) ListNodes() {
 				continue
 			}
 
-			if node.CreationTimestamp.Hour() == nextNode.CreationTimestamp.Hour() {
+			if node.CreationTimestamp.Hour() == nextNode.CreationTimestamp.Hour() && time.Now().Hour() != node.CreationTimestamp.Hour() {
 				logrus.WithFields(logrus.Fields{
 					"node": node.Name,
-				}).Infof("processing")
+				}).Infof("processing node termination")
 
 				pods, err := pc.ListPods(node.Name)
 
 				if err != nil {
-					logrus.Fatalf("Error listing pods (skipping rearrange): %v", err)
+					logrus.Errorf("error listing pods: %v", err)
 					break
 				}
 
 				for _, p := range pods.Items {
 					logrus.WithFields(logrus.Fields{
-						"pod": p.Name,
+						"pod":       p.Name,
 						"namespace": p.Namespace,
-					}).Infof("processing")
+					}).Infof("processing pod")
+
+					if err := pc.client.CoreV1().Pods(p.Namespace).Delete(p.Name, &metav1.DeleteOptions{GracePeriodSeconds: p.DeletionGracePeriodSeconds}); err != nil {
+						logrus.WithFields(logrus.Fields{
+							"pod":       p.Name,
+							"namespace": p.Namespace,
+						}).Errorf("failed to delete pod: %v", err)
+					}
 				}
+
+				for _, p := range pods.Items {
+					if err := pc.CheckIfPodIsDeleted(p); err != nil {
+						logrus.WithFields(logrus.Fields{
+							"pod":                        p.Name,
+							"namespace":                  p.Namespace,
+							"deletionGracePeriodSeconds": p.DeletionGracePeriodSeconds,
+						}).Errorf("pod did not get deleted: %v", err)
+					}
+				}
+
+				logrus.WithFields(logrus.Fields{
+					"node": node.Name,
+				}).Infof("evicted all pods")
+
+				if err := pc.client.CoreV1().Nodes().Delete(node.Name, &metav1.DeleteOptions{}); err != nil {
+					logrus.WithFields(logrus.Fields{
+						"node": node.Name,
+					}).Errorf("failed to delete node: %v", err)
+				}
+
+				logrus.WithFields(logrus.Fields{
+					"node": node.Name,
+				}).Infof("successfully deleted node")
 			}
+
+			logrus.WithFields(logrus.Fields{
+				"node": node.Name,
+			}).Infof("node does not match the delete criteria")
 		}
 	}
-}
-
-func (pc *PreemptibleController) ListPods(nodeName string) (*v1.PodList, error) {
-	options := metav1.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector("spec.nodeName", nodeName).String(),
-	}
-
-	return pc.client.CoreV1().Pods(metav1.NamespaceAll).List(options)
 }

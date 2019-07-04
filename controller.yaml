@@ -5,8 +5,11 @@ metadata:
   name: pvm-controller
 rules:
   - apiGroups: [""]
-    resources: ["nodes", "pods"]
-    verbs: ["get", "watch", "list"]
+    resources: ["nodes"]
+    verbs: ["get", "watch", "list", "delete"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "watch", "list", "delete"]
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -45,9 +48,18 @@ spec:
         app: pvm-controller
     spec:
       serviceAccountName: pvm-controller
+      tolerations:
+        - operator: Exists
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: cloud.google.com/gke-preemptible
+                    operator: DoesNotExist
       containers:
         - name: pvm-controller
-          image: eu.gcr.io/sthlmio/pvm-controller:0.2.6-4fb5eda
+          image: eu.gcr.io/sthlmio/pvm-controller:0.3.4-784f0ae
           resources:
             requests:
               cpu: 100m
