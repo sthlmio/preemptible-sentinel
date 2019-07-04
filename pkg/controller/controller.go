@@ -60,16 +60,16 @@ func Start() {
 }
 
 func NewPreemptibleController() *PreemptibleController {
-	var client kubernetes.Interface
+	var c kubernetes.Interface
 	_, err := rest.InClusterConfig()
 	if err != nil {
-		client = utils.GetClientOutOfCluster()
+		c = utils.GetClientOutOfCluster()
 	} else {
-		client = utils.GetClient()
+		c = utils.GetClient()
 	}
 
 	pc := &PreemptibleController{
-		client: client,
+		client: c,
 	}
 
 	return pc
@@ -186,11 +186,15 @@ func (pc *PreemptibleController) Process() {
 					logrus.WithFields(logrus.Fields{
 						"node": node.Name,
 					}).Errorf("failed to delete node: %v", err)
+
+					continue
 				}
 
 				logrus.WithFields(logrus.Fields{
 					"node": node.Name,
 				}).Infof("successfully deleted node")
+
+				break
 			}
 
 			logrus.WithFields(logrus.Fields{

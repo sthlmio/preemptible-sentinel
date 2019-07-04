@@ -36,7 +36,7 @@ import (
 
 func IsNodeReady(nodeStatus types.NodeStatus) bool {
 	for _, condition := range nodeStatus.Conditions {
-		if condition.Type == types.NodeReady {
+		if condition.Type == types.NodeReady && condition.Status == types.ConditionTrue {
 			return true
 		}
 	}
