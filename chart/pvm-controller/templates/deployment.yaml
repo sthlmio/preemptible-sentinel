@@ -14,7 +14,7 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: {{ include "pvm-controller.name" . }}
-        app.kubernetes.io/instance: {{ .Rel                                                                                       ease.Name }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
     {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
