@@ -1,0 +1,13 @@
+name: pvm-controller
+version: 0.0.1
+appVersion: 0.0.1
+description: A Helm chart for pvm-controller
+home: https://github.com/sthlmio/pvm-controller
+keywords:
+  - gke
+  - preemptible
+sources:
+  - https://github.com/sthlmio/pvm-controller
+maintainers:
+  - name: Fredrik Lack
+    email: fredrik@sthlm.io

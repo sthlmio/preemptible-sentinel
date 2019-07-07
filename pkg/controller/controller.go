@@ -125,8 +125,8 @@ func (pc *PreemptibleController) Process() {
 		return
 	}
 
-	// Sort nodes by creation timestamp
-	sort.SliceStable(nodes.Items, func(i, j int) bool { return nodes.Items[i].CreationTimestamp.Before(&nodes.Items[j].CreationTimestamp) })
+	// Sort nodes by creation timestamp (ASC sort)
+	sort.SliceStable(nodes.Items, func(i, j int) bool { return nodes.Items[i].CreationTimestamp.UTC().Before(nodes.Items[j].CreationTimestamp.UTC()) })
 
 	lengthOfNodeSlice := len(nodes.Items)
 	for i, node := range nodes.Items {
@@ -142,7 +142,7 @@ func (pc *PreemptibleController) Process() {
 				continue
 			}
 
-			if node.CreationTimestamp.Hour() == nextNode.CreationTimestamp.Hour() && time.Now().Hour() != node.CreationTimestamp.Hour() {
+			if node.CreationTimestamp.UTC().Sub(nextNode.CreationTimestamp.UTC()).Minutes() < 30 && time.Now().UTC().Hour() != node.CreationTimestamp.UTC().Hour() {
 				logrus.WithFields(logrus.Fields{
 					"node": node.Name,
 				}).Infof("processing node termination")

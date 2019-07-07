@@ -62,8 +62,8 @@ spec:
           image: eu.gcr.io/sthlmio/pvm-controller:0.3.4-784f0ae
           resources:
             requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
               cpu: 100m
               memory: 128Mi
-            limits:
-              cpu: 200m
-              memory: 256Mi
