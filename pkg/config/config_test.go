@@ -33,5 +33,13 @@ func TestGet(t *testing.T) {
 	os.Setenv("DURATION_IN_MINUTES", "10")
 	os.Setenv("DELETE_DIFF_MINUTES", "30")
 
-	Get()
+	config := Get()
+
+	if config.DurationInMinutes != 10 {
+		t.Errorf("DurationInMinutes was incorrect, got: %d, want: %d.", config.DurationInMinutes, 10)
+	}
+
+	if config.DeleteDiffMinutes != float64(30) {
+		t.Errorf("DurationInMinutes was incorrect, got: %f, want: %f.", config.DeleteDiffMinutes, float64(30))
+	}
 }
