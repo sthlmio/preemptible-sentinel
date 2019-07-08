@@ -4,7 +4,7 @@
 
 image:
   repository: eu.gcr.io/sthlmio-public-images/pvm-controller
-  tag: 0.1.0-alpha.0
+#  tag: 0.1.0-alpha.0
   pullPolicy: IfNotPresent
 
 # Duration in minutes between each node pool check
