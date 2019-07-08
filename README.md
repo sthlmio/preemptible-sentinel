@@ -52,5 +52,6 @@ helm install \
     --namespace sthlmio \
     --set-string repository=$(PRIVATE_DOCKER_REPO) \
     --set-string tag=latest \
+    --set-string pullPolicy=Always \
     ./chart/pvm-controller
 ```
