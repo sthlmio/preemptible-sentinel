@@ -36,7 +36,7 @@ We use `go1.12`, good commands to keep in mind:
 
 ```bash
 go build
-go test
+go test -v ./...
 go mod tidy
 go mod vendor
 ```

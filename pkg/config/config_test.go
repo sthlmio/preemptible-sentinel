@@ -22,21 +22,16 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-package utils
+package config
 
 import (
-	types "k8s.io/api/core/v1"
+	"os"
 	"testing"
 )
 
-func TestIsNodeReady(t *testing.T) {
-	conditions := []types.NodeCondition{
-		{Type: types.NodeReady, Status: types.ConditionTrue},
-		{Type: types.NodeDiskPressure, Status: types.ConditionTrue},
-		{Type: types.NodeMemoryPressure, Status: types.ConditionUnknown},
-	}
+func TestGet(t *testing.T) {
+	os.Setenv("DURATION_IN_MINUTES", "10")
+	os.Setenv("DELETE_DIFF_MINUTES", "30")
 
-	if !IsNodeReady(types.NodeStatus{Conditions: conditions}) {
-		t.Error("Node is not ready")
-	}
+	Get()
 }
