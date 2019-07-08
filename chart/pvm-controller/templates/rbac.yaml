@@ -3,14 +3,15 @@ kind: ClusterRoleBinding
 metadata:
   name: {{ include "pvm-controller.fullname" . }}-bindings
   labels:
-  {{ include "pvm-controller.labels" . | indent 4 }}
+{{ include "pvm-controller.labels" . | indent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: pvm-controller
+  name: {{ include "pvm-controller.fullname" . }}-roles
 subjects:
   - kind: ServiceAccount
-    name: pvm-controller
+    name: {{ include "pvm-controller.fullname" . }}-serviceaccount
+    namespace: {{ .Release.Namespace | quote }}
 
 ---
 
@@ -19,11 +20,11 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: {{ include "pvm-controller.fullname" . }}-roles
   labels:
-  {{ include "pvm-controller.labels" . | indent 4 }}
+{{ include "pvm-controller.labels" . | indent 4 }}
 rules:
   - apiGroups: [""]
     resources: ["nodes"]
-    verbs: ["get", "watch", "list", "delete"]
+    verbs: ["get", "list", "delete", "patch"]
   - apiGroups: [""]
     resources: ["pods"]
-    verbs: ["get", "watch", "list", "delete"]
+    verbs: ["get", "list", "delete"]

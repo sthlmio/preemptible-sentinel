@@ -2,16 +2,16 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-replicaCount: 1
-
 image:
   repository: eu.gcr.io/sthlmio/pvm-controller
-  tag: 0.3.4-784f0ae
+  tag: 0.4.17-48c94eb
   pullPolicy: IfNotPresent
 
-imagePullSecrets: []
-nameOverride: ""
-fullnameOverride: ""
+# Duration in minutes between each node pool check
+durationInMinutes: 10
+
+# Delete nodes that are created within this time diff
+deleteDiffMinutes: 30
 
 resources: {}
   # limits:

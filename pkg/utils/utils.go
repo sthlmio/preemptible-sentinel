@@ -26,6 +26,7 @@ package utils
 
 import (
 	"os"
+	"strconv"
 
 	"github.com/sirupsen/logrus"
 	types "k8s.io/api/core/v1"
@@ -33,6 +34,16 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
+
+func StringToInt(s string) int {
+	i, err := strconv.Atoi(s)
+
+	if err != nil {
+		logrus.Fatalf("Can not convert string to int: %v", err)
+	}
+
+	return i
+}
 
 func IsNodeReady(nodeStatus types.NodeStatus) bool {
 	for _, condition := range nodeStatus.Conditions {

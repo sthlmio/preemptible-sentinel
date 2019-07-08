@@ -25,12 +25,15 @@ SOFTWARE.
 package controller
 
 import (
+	"fmt"
 	"github.com/sirupsen/logrus"
+	"github.com/sthlmio/pvm-controller/pkg/config"
 	"github.com/sthlmio/pvm-controller/pkg/utils"
 	v1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
@@ -44,6 +47,7 @@ import (
 
 type PreemptibleController struct {
 	client kubernetes.Interface
+	config config.Config
 }
 
 func Start() {
@@ -70,6 +74,7 @@ func NewPreemptibleController() *PreemptibleController {
 
 	pc := &PreemptibleController{
 		client: c,
+		config: config.Get(),
 	}
 
 	return pc
@@ -81,7 +86,7 @@ func (pc *PreemptibleController) Run(stopCh <-chan struct{}) {
 	logrus.Info("Starting Preemptible Controller")
 
 	// Check things every 10 minute
-	go wait.Until(pc.Process, 10*time.Minute, stopCh)
+	go wait.Until(pc.Process, pc.config.DurationInMinutes*time.Minute, stopCh)
 	<-stopCh
 	logrus.Info("Shutting down Preemptible Controller")
 }
@@ -96,14 +101,29 @@ func (pc *PreemptibleController) ListNodes() (*v1.NodeList, error) {
 
 func (pc *PreemptibleController) ListPods(nodeName string) (*v1.PodList, error) {
 	options := metav1.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector("spec.nodeName", nodeName).String(),
+		FieldSelector: fields.AndSelectors(
+			fields.OneTermEqualSelector("spec.nodeName", nodeName),
+			//fields.OneTermNotEqualSelector("metadata.namespace", "kube-system"),
+		).String(),
 	}
 
 	return pc.client.CoreV1().Pods(metav1.NamespaceAll).List(options)
 }
 
+func filterPods(podList *v1.PodList, kind string) (output []v1.Pod) {
+	for _, pod := range podList.Items {
+		for _, ownerReference := range pod.ObjectMeta.OwnerReferences {
+			if ownerReference.Kind != kind {
+				output = append(output, pod)
+			}
+		}
+	}
+
+	return
+}
+
 func (pc *PreemptibleController) CheckIfPodIsDeleted(p v1.Pod) error {
-	return wait.PollImmediate(time.Second, 30*time.Second, func() (bool, error) {
+	return wait.PollImmediate(time.Second, 60*time.Second, func() (bool, error) {
 		_, err := pc.client.CoreV1().Pods(p.Namespace).Get(p.Name, metav1.GetOptions{})
 		if apierrs.IsNotFound(err) {
 			return true, nil // done
@@ -142,25 +162,34 @@ func (pc *PreemptibleController) Process() {
 				continue
 			}
 
-			if node.CreationTimestamp.UTC().Sub(nextNode.CreationTimestamp.UTC()).Minutes() < 30 && time.Now().UTC().Hour() != node.CreationTimestamp.UTC().Hour() {
+			if nextNode.CreationTimestamp.UTC().Sub(node.CreationTimestamp.UTC()).Minutes() < pc.config.DeleteDiffMinutes && time.Now().UTC().Sub(node.CreationTimestamp.UTC()).Minutes() > 60 {
 				logrus.WithFields(logrus.Fields{
 					"node": node.Name,
 				}).Infof("processing node termination")
+
+				patchBytes := []byte(fmt.Sprint(`{"spec":{"unschedulable":true}}`))
+				if _, err := pc.client.CoreV1().Nodes().Patch(node.Name, types.StrategicMergePatchType, patchBytes); err != nil {
+					logrus.Errorf("failed to patch node: %v", err)
+					continue
+				}
 
 				pods, err := pc.ListPods(node.Name)
 
 				if err != nil {
 					logrus.Errorf("error listing pods: %v", err)
-					break
+					continue
 				}
 
-				for _, p := range pods.Items {
+				// Filter out DaemonSet controlled pods, since they can't be deleted
+				filteredPodList := filterPods(pods, "DaemonSet")
+
+				for _, p := range filteredPodList {
 					logrus.WithFields(logrus.Fields{
 						"pod":       p.Name,
 						"namespace": p.Namespace,
 					}).Infof("processing pod")
 
-					if err := pc.client.CoreV1().Pods(p.Namespace).Delete(p.Name, &metav1.DeleteOptions{GracePeriodSeconds: p.DeletionGracePeriodSeconds}); err != nil {
+					if err := pc.client.CoreV1().Pods(p.Namespace).Delete(p.Name, &metav1.DeleteOptions{}); err != nil {
 						logrus.WithFields(logrus.Fields{
 							"pod":       p.Name,
 							"namespace": p.Namespace,
@@ -168,12 +197,11 @@ func (pc *PreemptibleController) Process() {
 					}
 				}
 
-				for _, p := range pods.Items {
+				for _, p := range filteredPodList {
 					if err := pc.CheckIfPodIsDeleted(p); err != nil {
 						logrus.WithFields(logrus.Fields{
-							"pod":                        p.Name,
-							"namespace":                  p.Namespace,
-							"deletionGracePeriodSeconds": p.DeletionGracePeriodSeconds,
+							"pod":       p.Name,
+							"namespace": p.Namespace,
 						}).Errorf("pod did not get deleted: %v", err)
 					}
 				}

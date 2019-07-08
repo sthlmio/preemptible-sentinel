@@ -13,11 +13,11 @@ LDFLAGS =
 default: build
 
 build:
-	"$(GOCMD)" build ${GOFLAGS} ${LDFLAGS} -o "${BINARY}"
+	"$(GOCMD)" build --no-cache ${GOFLAGS} ${LDFLAGS} -o "${BINARY}"
 
 # make build-image VER=1
 build-image:
-	@docker build -t ${DOCKER_REPO}:${VER}-${GIT} .
+	@docker build --no-cache -t ${DOCKER_REPO}:${VER}-${GIT} .
 
 # make push-image VER=1
 push-image: build-image
