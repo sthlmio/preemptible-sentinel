@@ -19,6 +19,7 @@ The controller is under development and should not be considered stable until we
     - Backup nodes if preemptible nodes should be out of stock
     
 #### Install
+Add sthlmio chart repository before installing the chart. Also the chart is installed with `--devel` flag to allow semver versions like `0.1.0-alpha.0` until we reach stable `1.0.0`.
 ```bash
 helm repo add sthlmio https://charts.sthlm.io
 
@@ -27,4 +28,29 @@ helm install \
     --namespace sthlmio \
     --devel \
     sthlmio/pvm-controller
+```
+
+#### Development
+The development of the chart can only be done against a GKE cluster with a node pool of regular vms and a node pool of preemptible vms.
+We use `go1.12`, good commands to keep in mind:
+
+```bash
+go build
+go test
+go mod tidy
+go mod vendor
+```
+
+##### Build/push/deploy for local development
+```bash
+export PRIVATE_DOCKER_REPO=<your private docker repo>
+
+docker build --no-cache -t $(PRIVATE_DOCKER_REPO):latest .
+docker push $(PRIVATE_DOCKER_REPO):latest
+helm install \
+    --name pvm-controller \
+    --namespace sthlmio \
+    --set-string repository=$(PRIVATE_DOCKER_REPO) \
+    --set-string tag=latest \
+    ./chart/pvm-controller
 ```
