@@ -40,6 +40,6 @@ func TestGet(t *testing.T) {
 	}
 
 	if config.DeleteDiffMinutes != float64(30) {
-		t.Errorf("DurationInMinutes was incorrect, got: %f, want: %f.", config.DeleteDiffMinutes, float64(30))
+		t.Errorf("DeleteDiffMinutes was incorrect, got: %f, want: %f.", config.DeleteDiffMinutes, float64(30))
 	}
 }
