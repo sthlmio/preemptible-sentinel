@@ -3,8 +3,8 @@
 # Declare variables to be passed into your templates.
 
 image:
-  repository: eu.gcr.io/sthlmio/pvm-controller
-  tag: 0.4.17-48c94eb
+  repository: eu.gcr.io/sthlmio-public-images/pvm-controller
+  tag: 0.1.0-alpha.0
   pullPolicy: IfNotPresent
 
 # Duration in minutes between each node pool check
@@ -14,12 +14,12 @@ durationInMinutes: 10
 deleteDiffMinutes: 30
 
 resources: {}
-  # limits:
-  #   cpu: 50m
-  #   memory: 64Mi
-  # requests:
-  #   cpu: 100m
-  #   memory: 128Mi
+#  limits:
+#    cpu: 50m
+#    memory: 64Mi
+#  requests:
+#    cpu: 100m
+#    memory: 128Mi
 
 nodeSelector: {}
 

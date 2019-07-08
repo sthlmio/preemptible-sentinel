@@ -1,6 +1,6 @@
 name: pvm-controller
-version: 0.0.1
-appVersion: 0.0.1
+version: 0.1.0-alpha.0
+appVersion: 0.1.0-alpha.0
 description: A Helm chart for pvm-controller
 home: https://github.com/sthlmio/pvm-controller
 keywords:

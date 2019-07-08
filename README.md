@@ -2,7 +2,7 @@
 
 This is a very simple Preemptible VM Controller (pvm), deployed to a GKE cluster it will monitor the Preemptible nodes used in the cluster and drain and delete nodes gracefully that are created close to each other, to prevent large disruptions when GKE automatically kills the nodes after 24h.
 
-The controller is under development and we plan to release it as a proper helm chart once we reach version `1.0`.
+The controller is under development and should not be considered stable until we reach version `1.0`.
 
 #### We use this in conjuction with:
 - [estafette-gke-node-pool-shifter](https://github.com/estafette/estafette-gke-node-pool-shifter)
@@ -17,3 +17,14 @@ The controller is under development and we plan to release it as a proper helm c
     - Running all HA workloads by default
 - **Backup node pool** (0-7 nodes using autoscaling)
     - Backup nodes if preemptible nodes should be out of stock
+    
+#### Install
+```bash
+helm repo add sthlmio https://charts.sthlm.io
+
+helm install \
+    --name pvm-controller \
+    --namespace sthlmio \
+    --devel \
+    sthlmio/pvm-controller
+```
