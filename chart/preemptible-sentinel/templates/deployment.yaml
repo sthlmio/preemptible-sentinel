@@ -1,24 +1,24 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "pvm-controller.fullname" . }}
+  name: {{ include "preemptible-sentinel.fullname" . }}
   labels:
-{{ include "pvm-controller.labels" . | indent 4 }}
+{{ include "preemptible-sentinel.labels" . | indent 4 }}
 spec:
   replicas: 1
   strategy:
     type: Recreate
   selector:
     matchLabels:
-      app.kubernetes.io/name: {{ include "pvm-controller.name" . }}
+      app.kubernetes.io/name: {{ include "preemptible-sentinel.name" . }}
       app.kubernetes.io/instance: {{ .Release.Name }}
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: {{ include "pvm-controller.name" . }}
+        app.kubernetes.io/name: {{ include "preemptible-sentinel.name" . }}
         app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
-      serviceAccountName: {{ include "pvm-controller.fullname" . }}-serviceaccount
+      serviceAccountName: {{ include "preemptible-sentinel.fullname" . }}-serviceaccount
     {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}

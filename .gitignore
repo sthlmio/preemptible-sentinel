@@ -15,4 +15,4 @@
 .DS_Store
 controller
 index.yaml
-pvm-controller-*.tgz
+preemptible-sentinel-*.tgz

@@ -1,16 +1,16 @@
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ include "pvm-controller.fullname" . }}-bindings
+  name: {{ include "preemptible-sentinel.fullname" . }}-bindings
   labels:
-{{ include "pvm-controller.labels" . | indent 4 }}
+{{ include "preemptible-sentinel.labels" . | indent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: {{ include "pvm-controller.fullname" . }}-roles
+  name: {{ include "preemptible-sentinel.fullname" . }}-roles
 subjects:
   - kind: ServiceAccount
-    name: {{ include "pvm-controller.fullname" . }}-serviceaccount
+    name: {{ include "preemptible-sentinel.fullname" . }}-serviceaccount
     namespace: {{ .Release.Namespace | quote }}
 
 ---
@@ -18,9 +18,9 @@ subjects:
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: {{ include "pvm-controller.fullname" . }}-roles
+  name: {{ include "preemptible-sentinel.fullname" . }}-roles
   labels:
-{{ include "pvm-controller.labels" . | indent 4 }}
+{{ include "preemptible-sentinel.labels" . | indent 4 }}
 rules:
   - apiGroups: [""]
     resources: ["nodes"]

@@ -27,8 +27,8 @@ package controller
 import (
 	"fmt"
 	"github.com/sirupsen/logrus"
-	"github.com/sthlmio/pvm-controller/pkg/config"
-	"github.com/sthlmio/pvm-controller/pkg/utils"
+	"github.com/sthlmio/preemptible-sentinel/pkg/config"
+	"github.com/sthlmio/preemptible-sentinel/pkg/utils"
 	v1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

@@ -25,7 +25,7 @@ SOFTWARE.
 package main
 
 import (
-	"github.com/sthlmio/pvm-controller/pkg/controller"
+	"github.com/sthlmio/preemptible-sentinel/pkg/controller"
 )
 
 func main() {

@@ -1,6 +1,6 @@
-# pvm-controller
+# preemptible-sentinel
 
-This is a very simple Preemptible VM Controller (pvm), deployed to a GKE cluster it will monitor the Preemptible nodes used in the cluster and drain and delete nodes gracefully that are created close to each other, to prevent large disruptions when GKE automatically kills the nodes after 24h.
+This is a very simple Preemptible Sentinel (Controller), deployed to a GKE cluster it will monitor the Preemptible nodes used in the cluster and drain and delete nodes gracefully that are created close to each other, to prevent large disruptions when GKE automatically kills the nodes after 24h.
 
 The controller is under development and should not be considered stable until we reach version `1.0`.
 
@@ -24,10 +24,10 @@ Add sthlmio chart repository before installing the chart. Also the chart is inst
 helm repo add sthlmio https://charts.sthlm.io
 
 helm install \
-    --name pvm-controller \
+    --name preemptible-sentinel \
     --namespace sthlmio \
     --devel \
-    sthlmio/pvm-controller
+    sthlmio/preemptible-sentinel
 ```
 
 #### Development
@@ -48,10 +48,10 @@ export PRIVATE_DOCKER_REPO=<your private docker repo>
 docker build --no-cache -t $(PRIVATE_DOCKER_REPO):latest .
 docker push $(PRIVATE_DOCKER_REPO):latest
 helm install \
-    --name pvm-controller \
+    --name preemptible-sentinel \
     --namespace sthlmio \
     --set-string repository=$(PRIVATE_DOCKER_REPO) \
     --set-string tag=latest \
     --set-string pullPolicy=Always \
-    ./chart/pvm-controller
+    ./chart/preemptible-sentinel
 ```

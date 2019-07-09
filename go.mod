@@ -1,4 +1,4 @@
-module github.com/sthlmio/pvm-controller
+module github.com/sthlmio/preemptible-sentinel
 
 go 1.12
 

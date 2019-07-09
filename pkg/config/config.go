@@ -25,7 +25,7 @@ SOFTWARE.
 package config
 
 import (
-	"github.com/sthlmio/pvm-controller/pkg/utils"
+	"github.com/sthlmio/preemptible-sentinel/pkg/utils"
 	"os"
 	"time"
 )
