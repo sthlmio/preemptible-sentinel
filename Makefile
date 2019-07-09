@@ -33,7 +33,7 @@ release: push-image
 #	helm repo index --merge index_current.yaml chart/
 	helm repo index chart/
 	gsutil cp preemptible-sentinel-${VER}.tgz gs://charts.sthlm.io
-	gsutil cp index.yaml gs://charts.sthlm.io
+	gsutil cp chart/index.yaml gs://charts.sthlm.io
 
 clean:
 	"$(GOCMD)" clean -i
