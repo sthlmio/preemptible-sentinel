@@ -14,8 +14,7 @@ export GOOGLE_APPLICATION_CREDENTIALS=${HOME}/gcloud-service-key.json
 
 # Download and install Helm
 curl -o /tmp/helm.tar.gz https://storage.googleapis.com/kubernetes-helm/helm-v2.14.1-linux-amd64.tar.gz
-tar -xvf /tmp/helm.tar.gz -C /tmp/
-mv /tmp/linux-amd64/helm /usr/local/bin/helm
+tar -xvf /tmp/helm.tar.gz
 helm init \
 	--client-only \
 	--skip-refresh
