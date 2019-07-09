@@ -23,14 +23,17 @@ build-image:
 push-image: build-image
 	@docker push ${DOCKER_REPO}:${VER}
 
-# make deploy-image VER=0.1.0-alpha.0
-deploy-image: push-image
-	@docker push ${DOCKER_REPO}:${VER}
-	helm package chart/pvm-controller
-	gsutil cp gs://charts.sthlm.io/index.yaml index.yaml
-	helm repo index --merge index.yaml chart/
-	gsutil cp chart/pvm-controller-${VER}.tgz gs://charts.sthlm.io
-	gsutil cp chart/index.yaml gs://charts.sthlm.io
+# make release VER=0.1.0-alpha.0
+release: #push-image
+	echo ${VER}
+#	sed -i -e "s/^\(\s*version\s*:\s*\).*/\1 $VER/" chart/pvm-controller/Chart.yaml
+#	sed -i -e "s/^\(\s*appVersion\s*:\s*\).*/\1 $VER/" chart/pvm-controller/Chart.yaml
+#	@docker push ${DOCKER_REPO}:${VER}
+#	helm package chart/pvm-controller
+#	gsutil cp gs://charts.sthlm.io/index.yaml index.yaml
+#	helm repo index --merge index.yaml chart/
+#	gsutil cp chart/pvm-controller-${VER}.tgz gs://charts.sthlm.io
+#	gsutil cp chart/index.yaml gs://charts.sthlm.io
 
 clean:
 	"$(GOCMD)" clean -i

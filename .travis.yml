@@ -1,0 +1,31 @@
+sudo: required
+
+language: go
+
+go:
+  - "1.12"
+
+branches:
+  only:
+    - master
+    - /^v.*$/
+
+services:
+  - docker
+
+cache:
+  directories:
+    - "$HOME/google-cloud-sdk/"
+
+env:
+  global:
+    - CLOUDSDK_CORE_DISABLE_PROMPTS=1
+
+script: go test -v ./...
+
+deploy:
+  - provider: script
+    script: "./scripts/release.sh"
+    skip_cleanup: true
+    on:
+      tags: true
