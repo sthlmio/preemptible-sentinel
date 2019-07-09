@@ -20,12 +20,31 @@ cache:
 env:
   global:
     - CLOUDSDK_CORE_DISABLE_PROMPTS=1
+    - HELM_URL=https://storage.googleapis.com/kubernetes-helm
+    - HELM_TGZ=helm-v2.14.1-linux-amd64.tar.gz
+    - GCLOUD_URL=https://dl.google.com/dl/cloudsdk/channels/rapid/downloads
+    - GCLOUD_TGZ=google-cloud-sdk-253.0.0-linux-x86_64.tar.gz
+
+install:
+  # Installing Helm
+  - wget -q ${HELM_URL}/${HELM_TGZ}
+  - tar xzfv ${HELM_TGZ}
+  - PATH=`pwd`/linux-amd64/:$PATH
+  - helm init --client-only
+  # Install gcloud
+  - wget -q ${GCLOUD_URL}/${GCLOUD_TGZ}
+  - tar xzfv ${GCLOUD_TGZ}
+  - /google-cloud-sdk/install.sh -q
+  - source /google-cloud-sdk/path.bash.inc
+  - echo $GOOGLE_CLOUD_SERVICE_KEY | base64 --decode -i > ${HOME}/gcloud-service-key.json
+  - gcloud auth activate-service-account --key-file ${HOME}/gcloud-service-key.json
+  - export GOOGLE_APPLICATION_CREDENTIALS=${HOME}/gcloud-service-key.json
 
 script: go test -v ./...
 
 deploy:
   - provider: script
-    script: "./scripts/release.sh"
+    script: make release VER=${TRAVIS_TAG:1:-1}
     skip_cleanup: true
     on:
       tags: true
