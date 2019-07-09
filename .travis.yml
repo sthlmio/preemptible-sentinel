@@ -8,7 +8,7 @@ go:
 branches:
   only:
     - master
-    - /^v*$/
+    - /^v.*$/
 
 services:
   - docker
