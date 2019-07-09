@@ -34,6 +34,7 @@ install:
   - source $HOME/google-cloud-sdk/path.bash.inc
   - echo $GOOGLE_CLOUD_SERVICE_KEY | base64 --decode -i > ${HOME}/gcloud-service-key.json
   - gcloud auth activate-service-account --key-file ${HOME}/gcloud-service-key.json
+  - gcloud auth configure-docker
 
 script: go test -v ./...
 
