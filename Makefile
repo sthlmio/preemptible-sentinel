@@ -29,9 +29,8 @@ release: push-image
 	sed -i -e "s/^\(\s*appVersion\s*:\s*\).*/\1 ${VER}/" chart/preemptible-sentinel/Chart.yaml
 	@docker push ${DOCKER_REPO}:${VER}
 	cd chart && helm package preemptible-sentinel
-#	gsutil cp gs://charts.sthlm.io/index.yaml index_current.yaml
-#	helm repo index --merge index_current.yaml chart/
-	cd chart && helm repo index .
+	cd chart && gsutil cp gs://charts.sthlm.io/index.yaml index_current.yaml
+	cd chart && helm repo index --merge index_current.yaml .
 	gsutil cp chart/preemptible-sentinel-${VER}.tgz gs://charts.sthlm.io
 	gsutil cp chart/index.yaml gs://charts.sthlm.io
 
