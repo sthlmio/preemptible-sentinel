@@ -32,13 +32,19 @@ install:
   - PATH=`pwd`/linux-amd64/:$PATH
   - helm init --client-only
   # Install gcloud
-  - wget -q ${GCLOUD_URL}/${GCLOUD_TGZ}
-  - tar xzfv ${GCLOUD_TGZ}
-  - /google-cloud-sdk/install.sh -q
-  - source /google-cloud-sdk/path.bash.inc
+  - if [ ! -d $HOME/google-cloud-sdk/bin ]; then
+    # The install script errors if this directory already exists,
+    # but Travis already creates it when we mark it as cached.
+    rm -rf $HOME/google-cloud-sdk;
+    # The install script is overly verbose, which sometimes causes
+    # problems on Travis, so ignore stdout.
+    curl https://sdk.cloud.google.com | bash > /dev/null;
+    fi
+  # This line is critical. We setup the SDK to take precedence in our
+  # environment over the old SDK that is already on the machine.
+  - source $HOME/google-cloud-sdk/path.bash.inc
   - echo $GOOGLE_CLOUD_SERVICE_KEY | base64 --decode -i > ${HOME}/gcloud-service-key.json
   - gcloud auth activate-service-account --key-file ${HOME}/gcloud-service-key.json
-  - export GOOGLE_APPLICATION_CREDENTIALS=${HOME}/gcloud-service-key.json
 
 script: go test -v ./...
 
