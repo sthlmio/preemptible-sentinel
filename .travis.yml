@@ -22,8 +22,6 @@ env:
     - CLOUDSDK_CORE_DISABLE_PROMPTS=1
     - HELM_URL=https://storage.googleapis.com/kubernetes-helm
     - HELM_TGZ=helm-v2.14.1-linux-amd64.tar.gz
-    - GCLOUD_URL=https://dl.google.com/dl/cloudsdk/channels/rapid/downloads
-    - GCLOUD_TGZ=google-cloud-sdk-253.0.0-linux-x86_64.tar.gz
 
 install:
   # Installing Helm
