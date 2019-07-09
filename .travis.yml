@@ -23,7 +23,9 @@ env:
     - HELM_URL=https://storage.googleapis.com/kubernetes-helm
     - HELM_TGZ=helm-v2.14.1-linux-amd64.tar.gz
 
-install:
+script: go test -v ./...
+
+before_deploy:
   # Installing Helm
   - wget -q ${HELM_URL}/${HELM_TGZ}
   - tar xzfv ${HELM_TGZ}
@@ -35,8 +37,6 @@ install:
   - echo $GOOGLE_CLOUD_SERVICE_KEY | base64 --decode -i > ${HOME}/gcloud-service-key.json
   - gcloud auth activate-service-account --key-file ${HOME}/gcloud-service-key.json
   - gcloud auth configure-docker
-
-script: go test -v ./...
 
 deploy:
   - provider: script

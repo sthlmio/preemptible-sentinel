@@ -29,10 +29,11 @@ release: push-image
 	sed -i -e "s/^\(\s*appVersion\s*:\s*\).*/\1 ${VER}/" chart/preemptible-sentinel/Chart.yaml
 	@docker push ${DOCKER_REPO}:${VER}
 	helm package chart/preemptible-sentinel
-#	gsutil cp gs://charts.sthlm.io/index.yaml index.yaml
+#	gsutil cp gs://charts.sthlm.io/index.yaml index_current.yaml
+#	helm repo index --merge index_current.yaml chart/
 	helm repo index chart/
-	gsutil cp /home/travis/gopath/src/github.com/sthlmio/preemptible-sentinel/preemptible-sentinel-${VER}.tgz gs://charts.sthlm.io
-	gsutil cp /home/travis/gopath/src/github.com/sthlmio/preemptible-sentinel/index.yaml gs://charts.sthlm.io
+	gsutil cp preemptible-sentinel-${VER}.tgz gs://charts.sthlm.io
+	gsutil cp index.yaml gs://charts.sthlm.io
 
 clean:
 	"$(GOCMD)" clean -i
