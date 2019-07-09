@@ -1,4 +1,4 @@
-.PHONY: default build clean build-image push-image
+.PHONY: default build clean build-image push-image release
 
 BINARY = controller
 
@@ -24,18 +24,16 @@ push-image: build-image
 	@docker push ${DOCKER_REPO}:${VER}
 
 # make release VER=0.1.0-alpha.0
-.ONESHELL:
 release: push-image
 	sed -i -e "s/^\(\s*version\s*:\s*\).*/\1 ${VER}/" chart/preemptible-sentinel/Chart.yaml
 	sed -i -e "s/^\(\s*appVersion\s*:\s*\).*/\1 ${VER}/" chart/preemptible-sentinel/Chart.yaml
 	@docker push ${DOCKER_REPO}:${VER}
-	cd chart
-	helm package preemptible-sentinel
+	cd chart && helm package preemptible-sentinel
 #	gsutil cp gs://charts.sthlm.io/index.yaml index_current.yaml
 #	helm repo index --merge index_current.yaml chart/
-	helm repo index .
-	gsutil cp preemptible-sentinel-${VER}.tgz gs://charts.sthlm.io
-	gsutil cp index.yaml gs://charts.sthlm.io
+	cd chart && helm repo index .
+	gsutil cp chart/preemptible-sentinel-${VER}.tgz gs://charts.sthlm.io
+	gsutil cp chart/index.yaml gs://charts.sthlm.io
 
 clean:
 	"$(GOCMD)" clean -i
