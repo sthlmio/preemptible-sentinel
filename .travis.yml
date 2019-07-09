@@ -29,7 +29,7 @@ install:
   - tar xzfv ${HELM_TGZ}
   - PATH=`pwd`/linux-amd64/:$PATH
   - helm init --client-only
-  # Install gcloud
+  # Installing Google Cloud SDK
   - if [ ! -d "$HOME/google-cloud-sdk/bin" ]; then rm -rf "$HOME/google-cloud-sdk"; curl https://sdk.cloud.google.com | bash > /dev/null; fi
   - source $HOME/google-cloud-sdk/path.bash.inc
   - echo $GOOGLE_CLOUD_SERVICE_KEY | base64 --decode -i > ${HOME}/gcloud-service-key.json
@@ -39,7 +39,7 @@ script: go test -v ./...
 
 deploy:
   - provider: script
-    script: make release VER=${TRAVIS_TAG:1:-1}
+    script: make release VER=${TRAVIS_TAG:1}
     skip_cleanup: true
     on:
       tags: true
