@@ -13,7 +13,7 @@ LDFLAGS =
 default: build
 
 build:
-	"$(GOCMD)" build --no-cache ${GOFLAGS} ${LDFLAGS} -o "${BINARY}"
+	$(GOCMD) build ${GOFLAGS} ${LDFLAGS} -o "${BINARY}"
 
 # make build-image VER=0.1.0-alpha.0
 build-image:

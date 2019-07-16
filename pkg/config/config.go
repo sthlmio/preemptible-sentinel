@@ -36,9 +36,18 @@ type Config struct {
 }
 
 func Get() Config {
+	// Defaults
 	c := Config{
-		DurationInMinutes: time.Duration(utils.StringToInt(os.Getenv("DURATION_IN_MINUTES"))),
-		DeleteDiffMinutes: float64(utils.StringToInt(os.Getenv("DELETE_DIFF_MINUTES"))),
+		DurationInMinutes: time.Duration(1),
+		DeleteDiffMinutes: float64(5),
+	}
+
+	if os.Getenv("DURATION_IN_MINUTES") != "" {
+		c.DurationInMinutes = time.Duration(utils.StringToInt(os.Getenv("DURATION_IN_MINUTES")))
+	}
+
+	if os.Getenv("DELETE_DIFF_MINUTES") != "" {
+		c.DeleteDiffMinutes = float64(utils.StringToInt(os.Getenv("DELETE_DIFF_MINUTES")))
 	}
 
 	return c

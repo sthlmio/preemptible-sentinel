@@ -43,6 +43,13 @@ go mod tidy
 go mod vendor
 ```
 
+##### Fast local development against GKE cluster
+Make sure that current context is against the cluster to test against
+`kubectl config set-context $(kubectl config current-context)
+```bash
+make && ./controller
+```
+
 ##### Build/push/deploy for local development
 ```bash
 export PRIVATE_DOCKER_REPO=<your private docker repo>

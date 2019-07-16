@@ -33,6 +33,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
 func StringToInt(s string) int {
@@ -86,6 +87,9 @@ func GetClientOutOfCluster() kubernetes.Interface {
 	}
 
 	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		logrus.Fatalf("Can not create kubernetes client: %v", err)
+	}
 
 	return clientset
 }

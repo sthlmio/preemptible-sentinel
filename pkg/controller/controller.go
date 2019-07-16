@@ -46,8 +46,8 @@ import (
 )
 
 type PreemptibleController struct {
-	client kubernetes.Interface
-	config config.Config
+	Client kubernetes.Interface
+	Config config.Config
 }
 
 func Start() {
@@ -73,8 +73,8 @@ func NewPreemptibleController() *PreemptibleController {
 	}
 
 	pc := &PreemptibleController{
-		client: c,
-		config: config.Get(),
+		Client: c,
+		Config: config.Get(),
 	}
 
 	return pc
@@ -86,55 +86,9 @@ func (pc *PreemptibleController) Run(stopCh <-chan struct{}) {
 	logrus.Info("Starting Preemptible Controller")
 
 	// Check things every 10 minute
-	go wait.Until(pc.Process, pc.config.DurationInMinutes*time.Minute, stopCh)
+	go wait.Until(pc.Process, pc.Config.DurationInMinutes*time.Minute, stopCh)
 	<-stopCh
 	logrus.Info("Shutting down Preemptible Controller")
-}
-
-func (pc *PreemptibleController) ListNodes() (*v1.NodeList, error) {
-	options := metav1.ListOptions{
-		LabelSelector: "cloud.google.com/gke-preemptible=true",
-	}
-
-	return pc.client.CoreV1().Nodes().List(options)
-}
-
-func (pc *PreemptibleController) ListPods(nodeName string) (*v1.PodList, error) {
-	options := metav1.ListOptions{
-		FieldSelector: fields.AndSelectors(
-			fields.OneTermEqualSelector("spec.nodeName", nodeName),
-			//fields.OneTermNotEqualSelector("metadata.namespace", "kube-system"),
-		).String(),
-	}
-
-	return pc.client.CoreV1().Pods(metav1.NamespaceAll).List(options)
-}
-
-func filterPods(podList *v1.PodList, kind string) (output []v1.Pod) {
-	for _, pod := range podList.Items {
-		for _, ownerReference := range pod.ObjectMeta.OwnerReferences {
-			if ownerReference.Kind != kind {
-				output = append(output, pod)
-			}
-		}
-	}
-
-	return
-}
-
-func (pc *PreemptibleController) CheckIfPodIsDeleted(p v1.Pod) error {
-	return wait.PollImmediate(time.Second, 60*time.Second, func() (bool, error) {
-		_, err := pc.client.CoreV1().Pods(p.Namespace).Get(p.Name, metav1.GetOptions{})
-		if apierrs.IsNotFound(err) {
-			return true, nil // done
-		}
-
-		if err != nil {
-			return true, err // stop wait with error
-		}
-
-		return false, nil
-	})
 }
 
 func (pc *PreemptibleController) Process() {
@@ -142,6 +96,11 @@ func (pc *PreemptibleController) Process() {
 
 	if err != nil {
 		logrus.Errorf("Error listing nodes (skipping rearrange): %v", err)
+		return
+	}
+
+	if len(nodes.Items) <= 0 {
+		logrus.Infof("No preemptible nodes found in cluster")
 		return
 	}
 
@@ -162,13 +121,13 @@ func (pc *PreemptibleController) Process() {
 				continue
 			}
 
-			if nextNode.CreationTimestamp.UTC().Sub(node.CreationTimestamp.UTC()).Minutes() < pc.config.DeleteDiffMinutes && time.Now().UTC().Sub(node.CreationTimestamp.UTC()).Minutes() > 60 {
+			if nextNode.CreationTimestamp.UTC().Sub(node.CreationTimestamp.UTC()).Minutes() < pc.Config.DeleteDiffMinutes && time.Now().UTC().Sub(node.CreationTimestamp.UTC()).Minutes() > 60 {
 				logrus.WithFields(logrus.Fields{
 					"node": node.Name,
 				}).Infof("processing node termination")
 
 				patchBytes := []byte(fmt.Sprint(`{"spec":{"unschedulable":true}}`))
-				if _, err := pc.client.CoreV1().Nodes().Patch(node.Name, types.StrategicMergePatchType, patchBytes); err != nil {
+				if _, err := pc.Client.CoreV1().Nodes().Patch(node.Name, types.StrategicMergePatchType, patchBytes); err != nil {
 					logrus.Errorf("failed to patch node: %v", err)
 					continue
 				}
@@ -180,37 +139,21 @@ func (pc *PreemptibleController) Process() {
 					continue
 				}
 
-				// Filter out DaemonSet controlled pods, since they can't be deleted
-				filteredPodList := filterPods(pods, "DaemonSet")
+				kubeSystemPods, err := pc.ListKubeSystemPods(node.Name)
 
-				for _, p := range filteredPodList {
-					logrus.WithFields(logrus.Fields{
-						"pod":       p.Name,
-						"namespace": p.Namespace,
-					}).Infof("processing pod")
-
-					if err := pc.client.CoreV1().Pods(p.Namespace).Delete(p.Name, &metav1.DeleteOptions{}); err != nil {
-						logrus.WithFields(logrus.Fields{
-							"pod":       p.Name,
-							"namespace": p.Namespace,
-						}).Errorf("failed to delete pod: %v", err)
-					}
+				if err != nil {
+					logrus.Errorf("error listing kube-system pods: %v", err)
+					continue
 				}
 
-				for _, p := range filteredPodList {
-					if err := pc.CheckIfPodIsDeleted(p); err != nil {
-						logrus.WithFields(logrus.Fields{
-							"pod":       p.Name,
-							"namespace": p.Namespace,
-						}).Errorf("pod did not get deleted: %v", err)
-					}
-				}
+				pc.ProcessPods(filterPods(pods, "DaemonSet"))
 
-				logrus.WithFields(logrus.Fields{
-					"node": node.Name,
-				}).Infof("evicted all pods")
+				// We process kube-system pods last to allow for time to flush logs etc
+				pc.ProcessPods(filterPods(kubeSystemPods, "DaemonSet"))
 
-				if err := pc.client.CoreV1().Nodes().Delete(node.Name, &metav1.DeleteOptions{}); err != nil {
+				logrus.Infof("evicted all pods")
+
+				if err := pc.Client.CoreV1().Nodes().Delete(node.Name, &metav1.DeleteOptions{}); err != nil {
 					logrus.WithFields(logrus.Fields{
 						"node": node.Name,
 					}).Errorf("failed to delete node: %v", err)
@@ -230,4 +173,86 @@ func (pc *PreemptibleController) Process() {
 			}).Infof("node does not match the delete criteria")
 		}
 	}
+}
+
+func (pc *PreemptibleController) ProcessPods(pods []v1.Pod) {
+	for _, p := range pods {
+		logrus.WithFields(logrus.Fields{
+			"pod":       p.Name,
+			"namespace": p.Namespace,
+		}).Infof("processing pod")
+
+		if err := pc.Client.CoreV1().Pods(p.Namespace).Delete(p.Name, &metav1.DeleteOptions{}); err != nil {
+			logrus.WithFields(logrus.Fields{
+				"pod":       p.Name,
+				"namespace": p.Namespace,
+			}).Errorf("failed to delete pod: %v", err)
+		}
+	}
+
+	for _, p := range pods {
+		if err := pc.CheckIfPodIsDeleted(p); err != nil {
+			logrus.WithFields(logrus.Fields{
+				"pod":       p.Name,
+				"namespace": p.Namespace,
+			}).Errorf("pod did not get deleted: %v", err)
+		}
+	}
+}
+
+func (pc *PreemptibleController) ListNodes() (*v1.NodeList, error) {
+	options := metav1.ListOptions{
+		LabelSelector: "cloud.google.com/gke-preemptible=true",
+	}
+
+	return pc.Client.CoreV1().Nodes().List(options)
+}
+
+func (pc *PreemptibleController) ListKubeSystemPods(nodeName string) (*v1.PodList, error) {
+	options := metav1.ListOptions{
+		FieldSelector: fields.AndSelectors(
+			fields.OneTermEqualSelector("spec.nodeName", nodeName),
+			fields.OneTermEqualSelector("metadata.namespace", "kube-system"),
+		).String(),
+	}
+
+	return pc.Client.CoreV1().Pods(metav1.NamespaceAll).List(options)
+}
+
+func (pc *PreemptibleController) ListPods(nodeName string) (*v1.PodList, error) {
+	options := metav1.ListOptions{
+		FieldSelector: fields.AndSelectors(
+			fields.OneTermEqualSelector("spec.nodeName", nodeName),
+			fields.OneTermNotEqualSelector("metadata.namespace", "kube-system"),
+		).String(),
+	}
+
+	return pc.Client.CoreV1().Pods(metav1.NamespaceAll).List(options)
+}
+
+func (pc *PreemptibleController) CheckIfPodIsDeleted(p v1.Pod) error {
+	return wait.PollImmediate(time.Second, 60*time.Second, func() (bool, error) {
+		_, err := pc.Client.CoreV1().Pods(p.Namespace).Get(p.Name, metav1.GetOptions{})
+		if apierrs.IsNotFound(err) {
+			return true, nil // done
+		}
+
+		if err != nil {
+			return true, err // stop wait with error
+		}
+
+		return false, nil
+	})
+}
+
+func filterPods(podList *v1.PodList, kind string) (output []v1.Pod) {
+	for _, pod := range podList.Items {
+		for _, ownerReference := range pod.ObjectMeta.OwnerReferences {
+			if ownerReference.Kind != kind {
+				output = append(output, pod)
+			}
+		}
+	}
+
+	return
 }
