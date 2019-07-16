@@ -176,26 +176,42 @@ func (pc *PreemptibleController) Process() {
 }
 
 func (pc *PreemptibleController) ProcessPods(pods []v1.Pod) {
+	nextPod:
 	for _, p := range pods {
 		logrus.WithFields(logrus.Fields{
 			"pod":       p.Name,
 			"namespace": p.Namespace,
-		}).Infof("processing pod")
+		}).Infof("trying to delete pod")
 
 		if err := pc.Client.CoreV1().Pods(p.Namespace).Delete(p.Name, &metav1.DeleteOptions{}); err != nil {
 			logrus.WithFields(logrus.Fields{
 				"pod":       p.Name,
 				"namespace": p.Namespace,
 			}).Errorf("failed to delete pod: %v", err)
-		}
-	}
+		} else {
+			for _, ownerReference := range p.ObjectMeta.OwnerReferences {
+				// Don't wait for statefulsets, since they will be recreated immediately with the same name
+				// and don't pass next check we make
+				if ownerReference.Kind == "StatefulSet" {
+					logrus.WithFields(logrus.Fields{
+						"pod":       p.Name,
+						"namespace": p.Namespace,
+					}).Infof("pod was successfully deleted")
+					continue nextPod
+				}
+			}
 
-	for _, p := range pods {
-		if err := pc.CheckIfPodIsDeleted(p); err != nil {
-			logrus.WithFields(logrus.Fields{
-				"pod":       p.Name,
-				"namespace": p.Namespace,
-			}).Errorf("pod did not get deleted: %v", err)
+			if err := pc.CheckIfPodIsDeleted(p); err != nil {
+				logrus.WithFields(logrus.Fields{
+					"pod":       p.Name,
+					"namespace": p.Namespace,
+				}).Errorf("pod did not get deleted: %v", err)
+			} else {
+				logrus.WithFields(logrus.Fields{
+					"pod":       p.Name,
+					"namespace": p.Namespace,
+				}).Infof("pod was successfully deleted")
+			}
 		}
 	}
 }
