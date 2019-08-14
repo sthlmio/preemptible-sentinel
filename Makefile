@@ -25,8 +25,8 @@ push-image: build-image
 
 # make release VER=0.1.0-alpha.0
 release: push-image
-	sed -i -e "s/^\(\s*version\s*:\s*\).*/\1 ${VER}/" chart/preemptible-sentinel/Chart.yaml
-	sed -i -e "s/^\(\s*appVersion\s*:\s*\).*/\1 ${VER}/" chart/preemptible-sentinel/Chart.yaml
+	sed -i '' -e "s/^\(\s*version\s*:\s*\).*/\1 ${VER}/" chart/preemptible-sentinel/Chart.yaml
+	sed -i '' -e "s/^\(\s*appVersion\s*:\s*\).*/\1 ${VER}/" chart/preemptible-sentinel/Chart.yaml
 	@docker push ${DOCKER_REPO}:${VER}
 	cd chart && helm package preemptible-sentinel
 	cd chart && gsutil cp gs://charts.sthlm.io/index.yaml index_current.yaml
